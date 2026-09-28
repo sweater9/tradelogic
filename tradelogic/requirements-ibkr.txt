@@ -1,0 +1,2 @@
+# Only needed when you enable Interactive Brokers (requires Python 3.10+)
+ib_async>=1.0.3

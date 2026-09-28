@@ -1,0 +1,26 @@
+[Unit]
+Description=TradeLogic dashboard
+After=network-online.target tradelogic-engine.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tradelogic
+Group=tradelogic
+WorkingDirectory=/opt/tradelogic
+EnvironmentFile=/opt/tradelogic/.env
+Environment=TRADELOGIC_DB=/var/lib/tradelogic/tradelogic.db
+Environment=TZ=America/New_York
+# Loopback only. Reach it remotely through a VPN, Tailscale or an SSH tunnel.
+ExecStart=/opt/tradelogic/.venv/bin/python -m tradelogic -c /opt/tradelogic/config.yaml api --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/tradelogic
+StateDirectory=tradelogic
+
+[Install]
+WantedBy=multi-user.target

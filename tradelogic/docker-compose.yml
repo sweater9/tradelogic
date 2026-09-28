@@ -1,0 +1,47 @@
+# Runs the trading engine and the dashboard as two containers sharing one database volume.
+#   docker compose up -d --build
+#   docker compose logs -f engine
+services:
+  engine:
+    build: .
+    command: ["run"]
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: America/New_York
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - tl_data:/data
+    # Lets the container reach TWS / IB Gateway running on the host (needed once you enable IBKR).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-m", "tradelogic", "-c", "/app/config.yaml", "health"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "5"}
+
+  api:
+    build: .
+    command: ["api", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - tl_data:/data
+    # Published on the host's loopback only. Reach it from elsewhere via VPN / SSH tunnel / Tailscale,
+    # never by opening this port to the internet.
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - engine
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+volumes:
+  tl_data:

@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>TradeLogic</title>
+<style>
+:root{
+  --bg:#eef1f4;--panel:#ffffff;--sunk:#f5f7f9;--ink:#13202c;--mut:#5b6b79;--line:#d9e0e6;
+  --acc:#1f4fd8;--acc-ink:#ffffff;--gain:#0b7a58;--loss:#c1412c;--warn:#9a6200;--warn-bg:#fdf3dc;--loss-bg:#fbe9e5;--gain-bg:#e3f4ee;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --r:10px;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f151b;--panel:#161e26;--sunk:#111a21;--ink:#e6edf3;--mut:#93a4b3;--line:#26333f;
+  --acc:#6c98ff;--acc-ink:#0b1220;--gain:#4cc9a0;--loss:#f08a78;--warn:#e8b24a;--warn-bg:#2a2210;--loss-bg:#2b1613;--gain-bg:#11261f}}
+:root[data-theme="dark"]{
+  --bg:#0f151b;--panel:#161e26;--sunk:#111a21;--ink:#e6edf3;--mut:#93a4b3;--line:#26333f;
+  --acc:#6c98ff;--acc-ink:#0b1220;--gain:#4cc9a0;--loss:#f08a78;--warn:#e8b24a;--warn-bg:#2a2210;--loss-bg:#2b1613;--gain-bg:#11261f}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+h1,h2,h3,p{margin:0}
+.mut{color:var(--mut)}.gain{color:var(--gain)}.loss{color:var(--loss)}
+
+/* shell */
+.app{display:block;min-height:100vh}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav button{flex:1;background:none;border:0;padding:9px 2px 8px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;cursor:pointer;min-height:56px;position:relative}
+.nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav button[aria-current="page"]{color:var(--acc);font-weight:600}
+.dot{position:absolute;top:5px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--acc);color:var(--acc-ink);font-size:11px;font-weight:700;display:grid;place-items:center}
+.brand{display:none}
+.main{max-width:980px;margin:0 auto;padding:0 14px 96px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 10px}
+.top h1{font-size:20px;font-weight:650;flex:1;letter-spacing:-.01em}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:13px;color:var(--mut);background:var(--panel);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--mut)}
+.chip.ok i{background:var(--gain)}.chip.bad i{background:var(--loss)}.chip.warn i{background:var(--warn)}
+.chip.live{background:var(--loss);border-color:var(--loss);color:#fff;font-weight:700}.chip.live i{background:#fff}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:9px 14px;min-height:42px;cursor:pointer;font-weight:550}
+.btn:hover{border-color:var(--acc)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.btn.danger{background:var(--loss);border-color:var(--loss);color:#fff}
+.btn.quiet{background:transparent}
+.btn.sm{min-height:36px;padding:6px 11px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+.banner{border-radius:var(--r);padding:10px 14px;margin:2px 0 12px;font-size:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner.bad{background:var(--loss-bg);color:var(--loss)}.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner b{font-weight:650}
+
+/* content */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.stack{display:grid;gap:12px}
+.cols{display:grid;gap:12px}
+.h{font-size:13px;color:var(--mut);font-weight:600;margin-bottom:8px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;margin:20px 2px 8px}
+.sechead h2{font-size:16px;font-weight:650}
+.sechead a,.link{color:var(--acc);background:none;border:0;padding:4px 0;cursor:pointer;font-size:14px;text-decoration:none}
+.equity{font:600 34px/1.1 var(--serif);letter-spacing:-.01em}
+.acct-row{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-end;margin-bottom:6px}
+.acct-row .chg{font-size:15px;font-weight:600}
+.range{display:flex;gap:4px;margin:8px 0 2px}
+.range button{background:none;border:1px solid transparent;border-radius:6px;padding:4px 10px;color:var(--mut);cursor:pointer;font-size:13px;min-height:32px}
+.range button[aria-pressed="true"]{border-color:var(--line);color:var(--ink);background:var(--sunk);font-weight:600}
+.chartwrap{position:relative;touch-action:pan-y}
+svg.chart{width:100%;height:170px;display:block;overflow:visible}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;transform:translateX(-50%)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--mut);margin-top:4px}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+/* decision cards */
+.decision{display:grid;gap:10px}
+.dhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:700;padding:2px 9px;border-radius:6px}
+.tag.buy{background:var(--gain-bg);color:var(--gain)}.tag.sell{background:var(--loss-bg);color:var(--loss)}
+.sym{font:600 24px/1 var(--serif)}
+.dpx{margin-left:auto;font-size:17px;font-weight:600}
+.why{color:var(--mut);font-size:14px}
+.ladder{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;font-size:13px}
+.ladder .bar{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--loss-bg),var(--loss));opacity:.85}
+.ladder .lab{display:grid}.ladder .lab b{font-weight:650;font-size:14px}.ladder .lab.r{text-align:right}
+.prev{list-style:none;margin:0;padding:10px 12px;background:var(--sunk);border-radius:8px;display:grid;gap:6px;font-size:14px}
+.prev li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.acts{display:grid;grid-template-columns:2fr 1fr;gap:8px}
+.empty{padding:22px 10px;text-align:center;color:var(--mut)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+
+/* lists */
+.rows{display:grid}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:11px 0;border-top:1px solid var(--line);align-items:center}
+.row:first-child{border-top:0}
+.row .a{font-weight:600}.row .b{text-align:right;font-weight:600}.row .c{color:var(--mut);font-size:13px}.row .d{color:var(--mut);font-size:13px;text-align:right}
+.pill{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;background:var(--sunk);border:1px solid var(--line);color:var(--mut)}
+.pill.executed,.pill.filled{color:var(--gain);border-color:var(--gain)}.pill.failed,.pill.rejected,.pill.canceled{color:var(--loss);border-color:var(--loss)}
+details.det summary{cursor:pointer;list-style:none;display:inline-block}details.det summary::-webkit-details-marker{display:none}
+details.det p{font-size:13px;color:var(--mut);margin-top:4px;word-break:break-word}
+.seg{display:flex;gap:4px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;margin-bottom:10px;width:fit-content}
+.seg button{background:none;border:0;padding:6px 14px;border-radius:6px;cursor:pointer;color:var(--mut);min-height:34px}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.ev{padding:7px 0;border-top:1px solid var(--line);font-size:14px;display:grid;gap:1px}.ev:first-child{border-top:0}
+.ev.warn{color:var(--warn)}.ev.error{color:var(--loss)}.ev small{color:var(--mut)}
+dl.kv{display:grid;grid-template-columns:1fr auto;gap:8px 14px;margin:0;font-size:14px}dl.kv dt{color:var(--mut)}dl.kv dd{margin:0;text-align:right;font-weight:600}
+.danger-zone{border-color:var(--loss)}
+.note{font-size:13px;color:var(--mut)}
+
+/* sheet + toast */
+.scrim{position:fixed;inset:0;background:rgba(6,12,18,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:12px}
+.sheet input{font:inherit;padding:11px;border-radius:8px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);width:100%}
+.toasts{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom,0px));z-index:50;display:grid;gap:8px;justify-items:center;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:420px;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+.toast.err{background:var(--loss);color:#fff}
+.gate{max-width:380px;margin:14vh auto 0;padding:0 20px;display:grid;gap:12px}
+.gate h1{font:600 32px/1.1 var(--serif)}
+.gate input{font:inherit;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.demo-tag{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:60;font-size:12px;background:var(--warn);color:#fff;padding:2px 9px;border-radius:99px;font-weight:600}
+
+@media (min-width:900px){
+  .app{display:grid;grid-template-columns:210px 1fr}
+  .nav{position:sticky;top:0;height:100vh;flex-direction:column;justify-content:flex-start;border-top:0;border-right:1px solid var(--line);padding:18px 10px;gap:2px}
+  .nav button{flex:none;flex-direction:row;gap:12px;justify-content:flex-start;font-size:15px;padding:10px 12px;border-radius:8px;min-height:44px}
+  .nav button[aria-current="page"]{background:var(--sunk)}
+  .dot{position:static;margin-left:auto}
+  .brand{display:block;font:600 22px var(--serif);padding:4px 12px 18px}
+  .main{padding:0 28px 40px;width:100%}
+  .cols.two{grid-template-columns:1fr 1fr}
+  .toasts{bottom:24px}
+  .acts{grid-template-columns:auto auto;justify-content:start}
+}
+@media (prefers-reduced-motion:no-preference){.toast{animation:in .2s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<div id="demotag" class="demo-tag" hidden>Demo data. Nothing is sent.</div>
+
+<div id="gate" class="gate" hidden>
+  <h1>TradeLogic</h1>
+  <p class="mut">Enter the dashboard token from your <code>.env</code> file to connect to your engine.</p>
+  <input id="tok" type="password" placeholder="Dashboard token" autocomplete="current-password" aria-label="Dashboard token">
+  <button class="btn pri" id="tokgo">Connect</button>
+  <p class="note" id="gateerr" role="alert"></p>
+  <p class="note">Your Alpaca keys stay on the server. This page never sees them. <a class="link" href="?demo">Preview with demo data</a></p>
+</div>
+
+<div class="app" id="app" hidden>
+  <nav class="nav" aria-label="Sections">
+    <div class="brand">TradeLogic</div>
+    <button data-nav="today"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Today</button>
+    <button data-nav="signals"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg>Decide<span class="dot" id="sigdot" hidden></span></button>
+    <button data-nav="positions"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Holdings</button>
+    <button data-nav="activity"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Activity</button>
+    <button data-nav="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Settings</button>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <h1 id="title">Today</h1>
+      <span class="chip" id="c-mode"></span>
+      <span class="chip" id="c-eng"></span>
+      <button class="btn sm danger" id="stopbtn" data-act="stop">Stop trading</button>
+      <button class="btn sm pri" id="resumebtn" data-act="resume" hidden>Resume</button>
+    </div>
+    <div id="banners"></div>
+    <div id="view"></div>
+  </div>
+</div>
+<div id="scrim" class="scrim" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+const FORCE_DEMO=false;
+const DEMO=FORCE_DEMO||new URLSearchParams(location.search).has('demo');
+const $=(s,r=document)=>r.querySelector(s);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+let TOKEN=store.get('tl_token')||'';
+const S={status:null,signals:[],positions:[],orders:[],events:[],equity:[],config:null,view:'today',range:'1W',act:'orders',online:true};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=(n,d=2)=>Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const money=(n,d=2)=>'$'+nf(n,d);
+const sgn=(n,d=2)=>(n>=0?'+':'-')+'$'+nf(Math.abs(n),d);
+const pct=(n,d=2)=>(n>=0?'+':'')+nf(n,d)+'%';
+const cls=n=>n>=0?'gain':'loss';
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const when=t=>new Date(t*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+const BN={alpaca:'Alpaca',ibkr:'Interactive Brokers'};
+
+/* ---------- demo backend ---------- */
+const D=(()=>{
+  const now=Date.now()/1000;let v=98400,eq=[];
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  for(let i=30*24;i>=0;i--){v*=1+(rnd()-.47)*0.0035;eq.push({ts:now-i*3600,broker:'alpaca',equity:v});}
+  const last=eq[eq.length-1].equity,day0=eq[eq.length-25].equity;
+  const st={mode:'paper',auto_execute:false,routing:'mirror',killed:false,engine_alive:true,last_scan:'today',
+    accounts:[{broker:'alpaca',equity:last,cash:last*0.41,ts:now,day_start:day0,day_change:last-day0}],brokers:{alpaca:'ok'}};
+  const sig=[
+   {id:3,created_at:now-1800,symbol:'COST',action:'BUY',price:962.40,stop:921.10,score:.21,status:'pending',detail:'',
+    reason:'20d breakout, RSI 63, vol 1.6x avg, 63d ret 12.4%, ATR 1.9%',preview:[{broker:'alpaca',qty:12,cost:11548.8,risk:495.6,risk_pct:.5}]},
+   {id:2,created_at:now-1800,symbol:'AVGO',action:'BUY',price:214.30,stop:201.85,score:.18,status:'pending',detail:'',
+    reason:'20d breakout, RSI 68, vol 1.4x avg, 63d ret 18.9%, ATR 2.8%',preview:[{broker:'alpaca',qty:40,cost:8572,risk:498,risk_pct:.5}]},
+   {id:1,created_at:now-1800,symbol:'XOM',action:'SELL',price:118.20,stop:null,score:0,status:'pending',detail:'',reason:'close below EMA50',preview:[]},
+   {id:0,created_at:now-86400,symbol:'NVDA',action:'BUY',price:198.10,stop:186.90,score:.3,status:'executed',detail:'alpaca: sent BUY 44 @ <= 198.70, stop 186.90',reason:''},
+   {id:-1,created_at:now-172800,symbol:'JPM',action:'BUY',price:301.00,stop:288.00,score:.1,status:'rejected',detail:'',reason:''}];
+  const pos=[
+   {broker:'alpaca',symbol:'NVDA',qty:44,avg_price:198.4,market_price:204.9,stop:186.9},
+   {broker:'alpaca',symbol:'JPM',qty:30,avg_price:296.2,market_price:301.7,stop:284.5},
+   {broker:'alpaca',symbol:'XOM',qty:70,avg_price:121.3,market_price:118.2,stop:113.4}];
+  const ord=[
+   {id:2,created_at:now-86400,broker:'alpaca',symbol:'NVDA',side:'buy',qty:44,limit_price:198.7,stop_price:186.9,status:'filled'},
+   {id:1,created_at:now-259200,broker:'alpaca',symbol:'JPM',side:'buy',qty:30,limit_price:296.9,stop_price:284.5,status:'filled'}];
+  const ev=[
+   {ts:now-1790,level:'info',message:'scan complete: 30 symbols, 3 new signals'},
+   {ts:now-86380,level:'info',message:'alpaca: BUY 44 NVDA submitted (new)'},
+   {ts:now-90000,level:'warn',message:'no data for: BRK.B'}];
+  const cfg={mode:'paper',auto_execute:false,routing:'mirror',brokers:{alpaca:{enabled:true,allocation:1},ibkr:{enabled:false,allocation:1}},
+   data:'alpaca',benchmark:'SPY',universe_size:30,
+   risk:{risk_per_trade_pct:.5,max_position_pct:10,max_open_positions:8,max_gross_exposure_pct:80,max_daily_loss_pct:2,min_price:5,entry_limit_slippage_pct:.3,max_chase_pct:1.5},
+   strategy:{},schedule:{scan_time:'16:20',timezone:'America/New_York'}};
+  return {st,sig,pos,ord,ev,eq,cfg};
+})();
+function demoApi(path,opt={}){
+  const m=(opt.method||'GET').toUpperCase();
+  if(m==='GET'){const k=path.split('/').pop();return Promise.resolve(({status:D.st,signals:D.sig,positions:D.pos,orders:D.ord,events:D.ev,equity:D.eq,config:D.cfg})[k]);}
+  let mm=path.match(/signals\/(-?\d+)\/(approve|reject)/);
+  if(mm){const s=D.sig.find(x=>x.id==mm[1]);if(s){s.status=mm[2]==='approve'?'executed':'rejected';s.detail=mm[2]==='approve'?'alpaca: sent (demo)':'';}}
+  if(path.endsWith('/kill'))D.st.killed=true;
+  if(path.endsWith('/resume'))D.st.killed=false;
+  return Promise.resolve({ok:true});
+}
+
+/* ---------- api ---------- */
+async function api(path,opt={}){
+  if(DEMO)return demoApi(path,opt);
+  const r=await fetch(path,{...opt,headers:{'X-Token':TOKEN,'Content-Type':'application/json'}});
+  if(r.status===401){store.del('tl_token');TOKEN='';showGate('That token was not accepted.');throw new Error('auth');}
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+async function load(){
+  try{
+    const [status,signals,positions,orders,events,equity,config]=await Promise.all(
+      ['status','signals','positions','orders','events','equity','config'].map(p=>api('/api/'+p)));
+    Object.assign(S,{status,signals,positions,orders,events,equity,config,online:true});
+  }catch(e){if(e.message==='auth')return;S.online=false;}
+  render();
+}
+
+/* ---------- toasts & sheet ---------- */
+function toast(msg,err){const t=document.createElement('div');t.className='toast'+(err?' err':'');t.textContent=msg;$('#toasts').append(t);setTimeout(()=>t.remove(),3800);}
+function openSheet(html){$('#sheet').innerHTML=html;$('#scrim').hidden=false;const i=$('#sheet input');if(i)i.focus();}
+function closeSheet(){$('#scrim').hidden=true;$('#sheet').innerHTML='';}
+$('#scrim').addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
+
+/* ---------- actions ---------- */
+async function post(path,body,ok){
+  try{await api(path,{method:'POST',body:body?JSON.stringify(body):undefined});toast(DEMO?'Demo only: nothing was sent':ok);setTimeout(load,DEMO?0:1500);}
+  catch(e){if(e.message!=='auth')toast('That did not go through. Check that the server is running.',true);}
+}
+function decide(id,a){
+  const s=S.signals.find(x=>x.id==id);if(!s)return;
+  if(a==='approve'&&S.status.mode==='live'){
+    const pv=(s.preview||[]).map(p=>`${BN[p.broker]||p.broker}: buy ${p.qty} shares for about ${money(p.cost,0)}`).join('<br>')||'Sell your whole position at market.';
+    openSheet(`<h2>Trade with real money?</h2><p>${esc(s.action)} <b>${esc(s.symbol)}</b><br><span class="mut">${pv}</span></p>
+      <button class="btn pri" data-act="confirm-approve" data-id="${id}">Yes, approve</button><button class="btn quiet" data-act="close">Cancel</button>`);return;
+  }
+  post(`/api/signals/${id}/${a}`,null,a==='approve'?`Approved. Sending ${s.symbol} to your broker.`:`Skipped ${s.symbol}.`);
+}
+document.addEventListener('click',e=>{
+  const nv=e.target.closest('[data-nav]');if(nv){go(nv.dataset.nav);return;}
+  const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+  if(a==='approve'||a==='reject')decide(id,a);
+  else if(a==='confirm-approve'){closeSheet();post(`/api/signals/${id}/approve`,null,'Approved. Sending to your broker.');}
+  else if(a==='close')closeSheet();
+  else if(a==='scan')post('/api/scan',null,'Scan started. New signals appear here in a minute.');
+  else if(a==='stop')openSheet(`<h2>Stop new trades?</h2><p class="mut">The engine will not open anything new. Your existing positions and their stop-losses stay in place.</p>
+      <button class="btn danger" data-act="confirm-stop">Stop trading</button><button class="btn quiet" data-act="close">Cancel</button>`);
+  else if(a==='confirm-stop'){closeSheet();post('/api/kill',{flatten:false},'New trades stopped.');}
+  else if(a==='resume')post('/api/resume',null,'Trading resumed.');
+  else if(a==='flatten')openSheet(`<h2>Close everything?</h2><p class="mut">This cancels every open order, including protective stops, and sells every position at market on all connected brokers. It cannot be undone.</p>
+      <input id="closetxt" placeholder="Type CLOSE to confirm" autocomplete="off"><button class="btn danger" data-act="confirm-flatten">Close everything now</button><button class="btn quiet" data-act="close">Cancel</button>`);
+  else if(a==='confirm-flatten'){if($('#closetxt').value.trim()!=='CLOSE'){toast('Type CLOSE to confirm.',true);return;}closeSheet();post('/api/kill',{flatten:true},'Closing all positions.');}
+  else if(a==='range'){S.range=b.dataset.v;render();}
+  else if(a==='seg'){S.act=b.dataset.v;render();}
+  else if(a==='theme'){const t=b.dataset.v;if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);store.set('tl_theme',t);render();}
+});
+
+/* ---------- routing ---------- */
+const TITLES={today:'Today',signals:'Decide',positions:'Holdings',activity:'Activity',settings:'Settings'};
+function go(v){S.view=v;history.replaceState(null,'','#'+v+(DEMO&&!FORCE_DEMO?'':''));window.scrollTo(0,0);render();}
+
+/* ---------- views ---------- */
+function acctTotals(){const a=S.status.accounts;const eq=a.reduce((s,x)=>s+x.equity,0);
+  const dc=a.every(x=>x.day_change!=null)&&a.length?a.reduce((s,x)=>s+x.day_change,0):null;
+  const ds=a.every(x=>x.day_start!=null)&&a.length?a.reduce((s,x)=>s+x.day_start,0):null;return{eq,dc,ds,cash:a.reduce((s,x)=>s+x.cash,0)};}
+function chart(){
+  const rows=S.equity;if(rows.length<2)return `<div class="empty"><b>Chart starts after a few snapshots</b>The engine records your equity every few seconds while it runs.</div>`;
+  const span={'1D':86400,'1W':604800,'1M':2592000}[S.range],t1=rows[rows.length-1].ts,t0=Math.max(rows[0].ts,t1-span);
+  const by={};rows.filter(r=>r.ts>=t0).forEach(r=>(by[r.broker]=by[r.broker]||[]).push(r));
+  const all=Object.values(by).flat();if(all.length<2)return `<div class="empty">Not enough data for this range yet.</div>`;
+  const lo=Math.min(...all.map(r=>r.equity)),hi=Math.max(...all.map(r=>r.equity)),W=600,H=170,pad=10;
+  const X=t=>(t-t0)/((t1-t0)||1)*W,Y=v=>H-pad-(v-lo)/((hi-lo)||1)*(H-pad*2);
+  const colors=['var(--acc)','var(--warn)'];
+  const keys=Object.keys(by);
+  const paths=keys.map((k,i)=>{const d=by[k].map((r,j)=>(j?'L':'M')+X(r.ts).toFixed(1)+' '+Y(r.equity).toFixed(1)).join('');
+    const area=keys.length===1?`<path d="${d}L${W} ${H}L0 ${H}Z" fill="var(--acc)" opacity=".08"/>`:'';
+    return area+`<path d="${d}" fill="none" stroke="${colors[i%2]}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`}).join('');
+  const legend=keys.length>1?`<div class="legend">${keys.map((k,i)=>`<span><i style="background:${colors[i%2]}"></i>${esc(BN[k]||k)}</span>`).join('')}</div>`:'';
+  return `<div class="chartwrap" id="cw" data-t0="${t0}" data-t1="${t1}" data-lo="${lo}" data-hi="${hi}"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Account equity over time">${paths}
+    <line id="cl" x1="0" x2="0" y1="0" y2="${H}" stroke="var(--mut)" stroke-dasharray="3 3" opacity="0"/></svg><div class="tip" id="tip" hidden></div></div>${legend}`;
+}
+function bindChart(){
+  const w=$('#cw');if(!w)return;
+  const by={};S.equity.forEach(r=>(by[r.broker]=by[r.broker]||[]).push(r));const first=by[Object.keys(by)[0]];
+  const move=ev=>{const rc=w.getBoundingClientRect(),x=Math.min(Math.max((ev.clientX-rc.left)/rc.width,0),1);
+    const t=+w.dataset.t0+x*(+w.dataset.t1-+w.dataset.t0);let best=first[0];for(const r of first)if(Math.abs(r.ts-t)<Math.abs(best.ts-t))best=r;
+    const tip=$('#tip',w);tip.hidden=false;tip.style.left=Math.min(Math.max(x*100,12),88)+'%';tip.textContent=money(best.equity,0)+' · '+when(best.ts);
+    const l=$('#cl');l.setAttribute('x1',x*600);l.setAttribute('x2',x*600);l.setAttribute('opacity','.7');};
+  const out=()=>{$('#tip',w).hidden=true;$('#cl').setAttribute('opacity','0');};
+  w.addEventListener('pointermove',move);w.addEventListener('pointerleave',out);
+}
+function acctCard(){
+  const t=acctTotals(),a=S.status.accounts;
+  if(!a.length)return `<div class="card"><div class="empty"><b>Waiting for your broker</b>The engine has not reported account data yet. Start it with <code>python -m tradelogic run</code>.</div></div>`;
+  const chg=t.dc!=null?`<span class="chg ${cls(t.dc)}">${sgn(t.dc)} (${pct(t.dc/t.ds*100)}) today</span>`:'';
+  const per=a.length>1?`<div class="note" style="margin-top:6px">${a.map(x=>`${esc(BN[x.broker]||x.broker)} ${money(x.equity,0)}`).join(' · ')}</div>`:'';
+  return `<div class="card"><div class="acct-row"><div><div class="h">${a.length>1?'Total across brokers':esc(BN[a[0].broker]||a[0].broker)+' account'}</div><div class="equity">${money(t.eq)}</div></div>${chg}
+    <div class="note" style="margin-left:auto">Cash ${money(t.cash,0)}</div></div>${per}
+    <div class="range" role="group" aria-label="Chart range">${['1D','1W','1M'].map(r=>`<button data-act="range" data-v="${r}" aria-pressed="${S.range===r}">${r}</button>`).join('')}</div>${chart()}</div>`;
+}
+function decisionCard(s){
+  const buy=s.action==='BUY';
+  let body='';
+  if(buy&&s.stop){const dist=(s.price-s.stop)/s.price*100;
+    body+=`<div class="ladder"><div class="lab"><span class="mut">Stop</span><b>${money(s.stop)}</b></div><div class="bar" title="Distance from entry to stop"></div><div class="lab r"><span class="mut">Entry</span><b>${money(s.price)}</b></div></div>
+    <p class="note">The stop sits ${nf(dist,1)}% below the entry. It is placed at your broker with the order.</p>`;
+    body+=(s.preview&&s.preview.length)?`<ul class="prev">${s.preview.map(p=>p.qty>0?`<li><span><b>${esc(BN[p.broker]||p.broker)}</b>: buy ${p.qty} shares (about ${money(p.cost,0)})</span><span class="loss">Risk ${money(p.risk,0)} · ${nf(p.risk_pct,2)}% of account</span></li>`:`<li><span><b>${esc(BN[p.broker]||p.broker)}</b>: too small to size with your limits</span></li>`).join('')}</ul>`:'';
+  }else if(!buy){const held=S.positions.filter(p=>p.symbol===s.symbol);
+    body+=`<ul class="prev"><li><span>${held.length?held.map(h=>`You hold <b>${h.qty}</b> shares on ${esc(BN[h.broker]||h.broker)}`).join('<br>'):'You hold this symbol'}</span><span>Sold at market</span></li></ul>`;}
+  return `<article class="card decision"><div class="dhead"><span class="tag ${buy?'buy':'sell'}">${buy?'Buy':'Sell'}</span><span class="sym">${esc(s.symbol)}</span><span class="dpx">${money(s.price)}</span></div>
+    <p class="why">${esc(s.reason)}</p>${body}
+    <div class="acts"><button class="btn pri" data-act="approve" data-id="${s.id}">${buy?'Approve buy':'Approve sell'}</button><button class="btn" data-act="reject" data-id="${s.id}">Skip</button></div></article>`;
+}
+const pending=()=>S.signals.filter(s=>s.status==='pending');
+function posRow(p){const pnl=(p.market_price-p.avg_price)*p.qty,pp=(p.market_price/p.avg_price-1)*100;
+  const stop=p.stop?`Stop ${money(p.stop)} · ${nf((p.market_price-p.stop)/p.market_price*100,1)}% away`:'No stop on record';
+  return `<div class="row"><div><span class="a">${esc(p.symbol)}</span> <span class="c">${p.qty} shares · ${esc(BN[p.broker]||p.broker)}</span></div><div class="b ${cls(pnl)}">${sgn(pnl)}</div>
+    <div class="c">${money(p.avg_price)} → ${money(p.market_price)}</div><div class="d ${cls(pnl)}">${pct(pp)}</div><div class="c" style="grid-column:1/-1">${stop}</div></div>`;}
+function vToday(){
+  const p=pending();
+  let h=`<div class="stack">${acctCard()}`;
+  h+=`</div><div class="sechead"><h2>Needs your decision</h2>${p.length?'<button class="link" data-nav="signals">See all '+p.length+'</button>':''}</div>`;
+  h+=p.length?`<div class="cols two">${p.slice(0,2).map(decisionCard).join('')}</div>`:`<div class="card"><div class="empty"><b>Nothing waiting</b>New signals appear after the market closes${S.status.last_scan?'. Last scan: '+esc(S.status.last_scan):''}.</div></div>`;
+  h+=`<div class="sechead"><h2>Holdings</h2><button class="link" data-nav="positions">Open</button></div><div class="card">${S.positions.length?`<div class="rows">${S.positions.slice(0,4).map(posRow).join('')}</div>`:'<div class="empty"><b>No open positions</b>Approved buys show up here once filled.</div>'}</div>`;
+  return h;
+}
+function vSignals(){
+  const p=pending(),hist=S.signals.filter(s=>s.status!=='pending');
+  let h=p.length?`<div class="cols two">${p.map(decisionCard).join('')}</div>`:`<div class="card"><div class="empty"><b>You are all caught up</b>The next scan runs at ${esc(S.config.schedule.scan_time)} ${esc(S.config.schedule.timezone.split('/').pop().replace('_',' '))} on weekdays.</div><div style="text-align:center;padding-bottom:6px"><button class="btn sm" data-act="scan">Scan now</button></div></div>`;
+  h+=`<div class="sechead"><h2>Earlier decisions</h2></div><div class="card">${hist.length?`<div class="rows">${hist.slice(0,20).map(s=>`<div class="row"><div><span class="a">${cap(s.action.toLowerCase())} ${esc(s.symbol)}</span><div class="c">${when(s.created_at)}</div></div><div class="b"><span class="pill ${esc(s.status)}">${esc(s.status)}</span></div>${s.detail?`<div style="grid-column:1/-1"><details class="det"><summary class="link">Details</summary><p>${esc(s.detail)}</p></details></div>`:''}</div>`).join('')}</div>`:'<div class="empty">Nothing yet.</div>'}</div>`;
+  return h;
+}
+function vPositions(){
+  const tot=S.positions.reduce((s,p)=>s+(p.market_price-p.avg_price)*p.qty,0),val=S.positions.reduce((s,p)=>s+p.market_price*p.qty,0);
+  return `<div class="card"><div class="acct-row"><div><div class="h">Position value</div><div class="equity">${money(val,0)}</div></div><span class="chg ${cls(tot)}">${sgn(tot)} unrealized</span></div></div>
+  <div class="card" style="margin-top:12px">${S.positions.length?`<div class="rows">${S.positions.map(posRow).join('')}</div>`:'<div class="empty"><b>No open positions</b>Approved buys show up here once filled.</div>'}</div>`;
+}
+function vActivity(){
+  const seg=`<div class="seg" role="group"><button data-act="seg" data-v="orders" aria-pressed="${S.act==='orders'}">Orders</button><button data-act="seg" data-v="log" aria-pressed="${S.act==='log'}">Log</button></div>`;
+  if(S.act==='orders')return seg+`<div class="card">${S.orders.length?`<div class="rows">${S.orders.map(o=>`<div class="row"><div><span class="a">${cap(o.side)} ${o.qty} ${esc(o.symbol)}</span><div class="c">${esc(BN[o.broker]||o.broker)} · ${when(o.created_at)}</div></div><div class="b"><span class="pill ${esc(o.status)}">${esc(o.status.replace('_',' '))}</span></div>${o.limit_price?`<div class="c">Limit ${money(o.limit_price)}${o.stop_price?' · Stop '+money(o.stop_price):''}</div>`:''}</div>`).join('')}</div>`:'<div class="empty"><b>No orders yet</b>Orders appear after you approve a signal.</div>'}</div>`;
+  return seg+`<div class="card">${S.events.length?S.events.map(e=>`<div class="ev ${esc(e.level)}"><span>${esc(e.message)}</span><small>${when(e.ts)}</small></div>`).join(''):'<div class="empty">No activity yet.</div>'}</div>`;
+}
+function vSettings(){
+  const c=S.config,st=S.status,r=c.risk;
+  const health=Object.entries(st.brokers).map(([b,v])=>`<div class="row"><div class="a">${esc(BN[b]||b)}</div><div class="b ${v==='ok'?'gain':v==='unknown'?'mut':'loss'}">${v==='ok'?'Connected':v==='unknown'?'Not checked yet':'Problem'}</div>${v!=='ok'&&v!=='unknown'?`<div class="c" style="grid-column:1/-1">${esc(v)}</div>`:''}</div>`).join('');
+  const th=store.get('tl_theme')||'auto';
+  return `<div class="cols two"><div class="stack">
+   <div class="card"><div class="h">Connections</div><div class="rows">${health}${c.brokers.ibkr.enabled?'':'<div class="row"><div class="a">Interactive Brokers</div><div class="b mut">Off</div><div class="c" style="grid-column:1/-1">Turn on later in config.yaml.</div></div>'}</div></div>
+   <div class="card"><div class="h">Mode</div><dl class="kv"><dt>Trading mode</dt><dd>${st.mode==='live'?'Live money':'Paper (practice)'}</dd><dt>Trade approval</dt><dd>${st.auto_execute?'Automatic':'You approve each trade'}</dd>
+    <dt>Routing</dt><dd>${c.brokers.alpaca.enabled&&c.brokers.ibkr.enabled?(st.routing==='mirror'?'Both brokers':'Backup broker'):'Single broker'}</dd><dt>Market data</dt><dd>${esc(c.data)}</dd><dt>Watching</dt><dd>${c.universe_size} stocks vs ${esc(c.benchmark)}</dd></dl></div>
+   <div class="card"><div class="h">Appearance</div><div class="seg" role="group">${['auto','light','dark'].map(t=>`<button data-act="theme" data-v="${t}" aria-pressed="${th===t}">${cap(t)}</button>`).join('')}</div></div>
+  </div><div class="stack">
+   <div class="card"><div class="h">Your safety limits</div><dl class="kv"><dt>Risk per trade</dt><dd>${r.risk_per_trade_pct}% of account</dd><dt>Largest position</dt><dd>${r.max_position_pct}% of account</dd><dt>Open positions</dt><dd>up to ${r.max_open_positions}</dd>
+    <dt>Total invested</dt><dd>up to ${r.max_gross_exposure_pct}%</dd><dt>Daily loss halt</dt><dd>${r.max_daily_loss_pct}%</dd><dt>Skip if price ran</dt><dd>${r.max_chase_pct}% above signal</dd></dl>
+    <p class="note" style="margin-top:10px">To change these, edit <code>config.yaml</code> and restart the engine.</p></div>
+   <div class="card"><div class="h">Actions</div><div class="stack"><button class="btn" data-act="scan">Scan now</button></div></div>
+   <div class="card danger-zone"><div class="h" style="color:var(--loss)">Emergency</div><p class="note" style="margin-bottom:10px">Sells every position and cancels every order, including stop-losses, on all brokers.</p><button class="btn danger" data-act="flatten">Close everything</button></div>
+  </div></div>`;
+}
+const VIEWS={today:vToday,signals:vSignals,positions:vPositions,activity:vActivity,settings:vSettings};
+
+function render(){
+  if(!S.status)return;
+  const st=S.status,n=pending().length;
+  $('#title').textContent=TITLES[S.view];
+  document.querySelectorAll('[data-nav]').forEach(b=>b.setAttribute('aria-current',b.dataset.nav===S.view?'page':'false'));
+  const dot=$('#sigdot');dot.hidden=!n;dot.textContent=n;
+  const cm=$('#c-mode');cm.className='chip '+(st.mode==='live'?'live':'');cm.innerHTML='<i></i>'+(st.mode==='live'?'LIVE':'Paper');
+  const ce=$('#c-eng');ce.className='chip '+(st.engine_alive?'ok':'bad');ce.innerHTML='<i></i>'+(st.engine_alive?'Engine on':'Engine off');
+  $('#stopbtn').hidden=st.killed;$('#resumebtn').hidden=!st.killed;
+  let b='';
+  if(!S.online)b+=`<div class="banner bad"><span><b>Cannot reach the server.</b> Showing the last data received.</span></div>`;
+  if(!st.engine_alive)b+=`<div class="banner bad"><span><b>The trading engine is not running.</b> Nothing will scan or trade until you start it: <code>python -m tradelogic run</code></span></div>`;
+  if(st.killed)b+=`<div class="banner warn"><span><b>New trades are stopped.</b> Existing stop-losses are still active at your broker.</span><button class="btn sm" data-act="resume">Resume</button></div>`;
+  $('#banners').innerHTML=b;
+  $('#view').innerHTML=VIEWS[S.view]();
+  bindChart();
+}
+
+/* ---------- boot ---------- */
+function showGate(msg){$('#gate').hidden=false;$('#app').hidden=true;$('#gateerr').textContent=msg||'';}
+async function boot(){
+  const qt=new URLSearchParams(location.search).get('token');
+  if(qt){TOKEN=qt;store.set('tl_token',qt);history.replaceState(null,'',location.pathname+location.hash);}
+  const th=store.get('tl_theme');if(th&&th!=='auto')document.documentElement.setAttribute('data-theme',th);
+  const h=location.hash.slice(1);if(TITLES[h])S.view=h;
+  if(DEMO)$('#demotag').hidden=false;
+  else if(!TOKEN){showGate();return;}
+  try{await load();if(S.status){$('#gate').hidden=true;$('#app').hidden=false;}else showGate('Could not reach the server.');}catch(e){}
+}
+$('#tokgo').onclick=()=>{TOKEN=$('#tok').value.trim();store.set('tl_token',TOKEN);boot();};
+$('#tok').addEventListener('keydown',e=>{if(e.key==='Enter')$('#tokgo').click();});
+boot();
+setInterval(()=>{if(document.visibilityState==='visible'&&!$('#app').hidden&&$('#scrim').hidden)load();},6000);
+</script>
+</body>
+</html>

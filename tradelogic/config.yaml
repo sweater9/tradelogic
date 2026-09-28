@@ -1,0 +1,63 @@
+# Copy to config.yaml and edit.
+
+mode: paper            # paper | live  (live also needs TRADELOGIC_CONFIRM_LIVE in .env)
+auto_execute: false    # false = every trade waits for your approval in the dashboard
+db_path: tradelogic.db
+
+brokers:
+  routing: mirror      # mirror  = send each trade to ALL enabled brokers
+                       # failover = use first enabled broker, fall back to the next on error
+  alpaca:
+    enabled: true
+    allocation: 1.0    # fraction of that account's equity the bot may size against
+    feed: iex          # iex (free) | sip (paid)
+  ibkr:
+    enabled: false
+    allocation: 1.0
+    host: 127.0.0.1
+    port: 7497         # TWS paper 7497 | TWS live 7496 | Gateway paper 4002 | Gateway live 4001
+    client_id: 17
+    market_data_type: 1   # 1 live, 3 delayed
+
+data:
+  provider: alpaca     # yfinance | alpaca | ibkr
+  history_days: 420
+
+benchmark: SPY
+universe: [AAPL, MSFT, NVDA, AMZN, GOOGL, META, AVGO, LLY, JPM, V, XOM, UNH, COST, HD, PG,
+           JNJ, ABBV, MRK, CVX, NFLX, CRM, AMD, ORCL, ADBE, KO, PEP, TMO, WMT, BAC, CAT]
+
+strategy:
+  trend_sma: 200
+  ema_fast: 20
+  ema_slow: 50
+  breakout_lookback: 20
+  rsi_min: 50
+  rsi_max: 78
+  volume_mult: 1.2
+  max_atr_pct: 6.0
+  min_dollar_volume: 20000000
+  stop_atr_mult: 2.0
+  trail_atr_mult: 3.0
+  regime_sma: 200
+
+risk:
+  risk_per_trade_pct: 0.5     # % of equity lost if the stop is hit
+  max_position_pct: 10        # max % of equity in one stock
+  max_open_positions: 8
+  max_gross_exposure_pct: 80
+  max_daily_loss_pct: 2       # halts new entries for the day when hit
+  min_price: 5
+  entry_limit_slippage_pct: 0.3
+  max_chase_pct: 1.5          # skip entry if price ran this far above signal price
+
+schedule:
+  scan_time: "16:20"          # local exchange time, after the close
+  timezone: America/New_York
+  poll_seconds: 10
+  signal_ttl_hours: 20
+
+backtest:
+  initial_capital: 100000
+  commission_per_share: 0.005
+  slippage_bps: 5
